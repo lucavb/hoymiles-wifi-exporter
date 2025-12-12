@@ -1,0 +1,42 @@
+[project]
+name = "hoymiles-wifi-exporter"
+version = "0.1.0"
+description = "Prometheus exporter for Hoymiles WiFi inverters"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "hoymiles-wifi>=0.5.5",
+    "prometheus-client>=0.23.1",
+]
+
+[project.scripts]
+hoymiles-wifi-exporter = "main:main"
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.407",
+    "ruff>=0.14.8",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+branch = "main"
+commit_message = "chore(release): {version}"
+tag_format = "v{version}"
+
+[tool.semantic_release.changelog]
+changelog_file = "CHANGELOG.md"
+
+[tool.semantic_release.remote]
+type = "github"
