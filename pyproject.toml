@@ -1,6 +1,6 @@
 [project]
 name = "hoymiles-wifi-exporter"
-version = "0.1.0"
+version = "1.0.0"
 description = "Prometheus exporter for Hoymiles WiFi inverters"
 readme = "README.md"
 requires-python = ">=3.13"
