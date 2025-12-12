@@ -30,13 +30,9 @@ pythonVersion = "3.13"
 typeCheckingMode = "basic"
 
 [tool.semantic_release]
-version_toml = ["pyproject.toml:project.version"]
-branch = "main"
-commit_message = "chore(release): {version}"
+version_source = "tag"
 tag_format = "v{version}"
-
-[tool.semantic_release.changelog]
-changelog_file = "CHANGELOG.md"
+commit = false
 
 [tool.semantic_release.remote]
 type = "github"
