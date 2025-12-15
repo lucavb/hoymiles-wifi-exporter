@@ -108,24 +108,40 @@ dtu_up = Gauge(
 )
 
 
-def update_port_metrics(port_data, port_label: str) -> None:
-    pv_power.labels(port=port_label).set(port_data.pv_power / 10)
-    pv_voltage.labels(port=port_label).set(port_data.pv_vol / 10)
-    pv_current.labels(port=port_label).set(port_data.pv_cur / 100)
-    pv_energy_total.labels(port=port_label).set(port_data.pv_energy_total)
-    pv_energy_daily.labels(port=port_label).set(port_data.pv_daily_energy)
+def update_pv_metrics(pv_data, port_label: str) -> None:
+    pv_power.labels(port=port_label).set(pv_data.power / 10)
+    pv_voltage.labels(port=port_label).set(pv_data.voltage / 10)
+    pv_current.labels(port=port_label).set(pv_data.current / 100)
+    pv_energy_total.labels(port=port_label).set(pv_data.energy_total)
+    pv_energy_daily.labels(port=port_label).set(pv_data.energy_daily)
 
-    grid_voltage.labels(port=port_label).set(port_data.grid_vol / 10)
-    grid_frequency.labels(port=port_label).set(port_data.grid_freq / 100)
-    grid_power.labels(port=port_label).set(port_data.grid_power / 10)
-    grid_reactive_power.labels(port=port_label).set(port_data.grid_reactive_power / 10)
-    grid_current.labels(port=port_label).set(port_data.grid_cur / 100)
-    grid_energy_total.labels(port=port_label).set(port_data.grid_energy_total)
-    grid_energy_daily.labels(port=port_label).set(port_data.grid_daily_energy)
 
-    inverter_power_factor.labels(port=port_label).set(port_data.pf / 1000)
-    inverter_temperature.labels(port=port_label).set(port_data.temp / 10)
-    inverter_operating_status.labels(port=port_label).set(port_data.operating_status)
+def _get_metric_value(obj: object, attr: str, default: float = 0) -> float:
+    value = getattr(obj, attr, None)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        logger.debug("Could not convert %s=%r to float", attr, value)
+        return default
+
+
+def update_grid_metrics(sgs_data, port_label: str) -> None:
+    grid_voltage.labels(port=port_label).set(_get_metric_value(sgs_data, "voltage") / 10)
+    grid_frequency.labels(port=port_label).set(_get_metric_value(sgs_data, "frequency") / 100)
+    grid_power.labels(port=port_label).set(_get_metric_value(sgs_data, "power") / 10)
+    reactive = _get_metric_value(sgs_data, "reactive_power")
+    grid_reactive_power.labels(port=port_label).set(reactive / 10)
+    grid_current.labels(port=port_label).set(_get_metric_value(sgs_data, "current") / 100)
+    grid_energy_total.labels(port=port_label).set(_get_metric_value(sgs_data, "energy_total"))
+    grid_energy_daily.labels(port=port_label).set(_get_metric_value(sgs_data, "energy_daily"))
+
+    inverter_power_factor.labels(port=port_label).set(_get_metric_value(sgs_data, "pf") / 1000)
+    inverter_temperature.labels(port=port_label).set(_get_metric_value(sgs_data, "temp") / 10)
+    inverter_operating_status.labels(port=port_label).set(
+        _get_metric_value(sgs_data, "operating_status")
+    )
 
 
 async def collect_metrics(dtu: DTU, dtu_host: str) -> None:
@@ -156,32 +172,44 @@ async def collect_metrics(dtu: DTU, dtu_host: str) -> None:
                 }
             )
 
-        sgs_data_list = getattr(response, "sgs_data", []) or getattr(response, "pv_data", []) or []
+        sgs_data_list = getattr(response, "sgs_data", []) or []
+        pv_data_list = getattr(response, "pv_data", []) or []
 
+        sgs_data_map: dict[str, object] = {}
         for sgs_data in sgs_data_list:
             serial_number = str(sgs_data.serial_number)
             logger.debug(
-                "Inverter %s fields: %s",
+                "Inverter %s sgs_data fields: %s",
                 serial_number,
                 [f for f in dir(sgs_data) if not f.startswith("_")],
             )
+            sgs_data_map[serial_number] = sgs_data
 
-            port_data_list = getattr(sgs_data, "port_data", []) or []
-            logger.debug("Port data count: %d", len(port_data_list))
+        ports_processed = 0
+        for pv_data in pv_data_list:
+            serial_number = str(pv_data.serial_number)
+            port_number = pv_data.port_number
+            port_label = f"{serial_number}_{port_number}"
 
-            for i, port_data in enumerate(port_data_list):
-                port_label = f"{serial_number}_{i + 1}"
-                logger.debug(
-                    "Port %s fields: %s",
-                    port_label,
-                    [f for f in dir(port_data) if not f.startswith("_")],
-                )
-                update_port_metrics(port_data, port_label)
+            logger.debug(
+                "Port %s pv_data fields: %s",
+                port_label,
+                [f for f in dir(pv_data) if not f.startswith("_")],
+            )
+            update_pv_metrics(pv_data, port_label)
+
+            sgs_data = sgs_data_map.get(serial_number)
+            if sgs_data:
+                update_grid_metrics(sgs_data, port_label)
+            else:
+                logger.warning("Port %s: no sgs_data found, grid metrics not updated", port_label)
+
+            ports_processed += 1
 
         logger.info(
-            "Collected metrics: %d inverter(s), %d port(s)",
+            "Collected metrics: %d port(s) from %d inverter(s)",
+            ports_processed,
             len(sgs_data_list),
-            sum(len(getattr(s, "port_data", []) or []) for s in sgs_data_list),
         )
 
     except Exception as e:
