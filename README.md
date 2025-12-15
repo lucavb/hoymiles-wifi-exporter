@@ -18,7 +18,7 @@ docker run -d \
   --name hoymiles-exporter \
   -p 9099:9099 \
   -e DTU_HOST=192.168.1.100 \
-  ghcr.io/lucabecker/hoymiles-wifi-exporter:latest
+  ghcr.io/lucavb/hoymiles-wifi-exporter:latest
 ```
 
 ### Docker Compose
@@ -26,7 +26,7 @@ docker run -d \
 ```yaml
 services:
   hoymiles-exporter:
-    image: ghcr.io/lucabecker/hoymiles-wifi-exporter:latest
+    image: ghcr.io/lucavb/hoymiles-wifi-exporter:latest
     ports:
       - "9099:9099"
     environment:
