@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim@sha256:4f0bb0bed02fc05d6361b4ed2c37cddd40ce6478abb222a2f30036e0888f6db5 AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim@sha256:74241aba44a777b228aef38d5d1b411a7405f6ec8faffdc284e24656ea3079b5 AS builder
 
 WORKDIR /app
 
