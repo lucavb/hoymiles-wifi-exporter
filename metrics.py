@@ -151,8 +151,12 @@ def update_grid_metrics(sgs_data, port_label: str) -> None:
     grid_energy_total.labels(port=port_label).set(_get_metric_value(sgs_data, "energy_total"))
     grid_energy_daily.labels(port=port_label).set(_get_metric_value(sgs_data, "energy_daily"))
 
-    inverter_power_factor.labels(port=port_label).set(_get_metric_value(sgs_data, "power_factor") / 1000)
-    inverter_temperature.labels(port=port_label).set(_get_metric_value(sgs_data, "temperature") / 10)
+    inverter_power_factor.labels(port=port_label).set(
+        _get_metric_value(sgs_data, "power_factor") / 1000
+    )
+    inverter_temperature.labels(port=port_label).set(
+        _get_metric_value(sgs_data, "temperature") / 10
+    )
     inverter_operating_status.labels(port=port_label).set(
         _get_metric_value(sgs_data, "operating_status")
     )
