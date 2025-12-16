@@ -23,6 +23,8 @@ COPY --from=builder /app/main.py /app/main.py
 COPY --from=builder /app/config.py /app/config.py
 COPY --from=builder /app/metrics.py /app/metrics.py
 COPY --from=builder /app/collector.py /app/collector.py
+COPY --from=builder /app/version.py /app/version.py
+COPY --from=builder /app/pyproject.toml /app/pyproject.toml
 
 ENV PATH="/app/.venv/bin:$PATH"
 

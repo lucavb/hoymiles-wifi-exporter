@@ -9,6 +9,7 @@ from prometheus_client import start_http_server
 
 from collector import collect_metrics
 from config import METRICS_PORT, SCRAPE_INTERVAL, get_dtu_host, setup_logging
+from version import get_version
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ def main() -> None:
         logger.error("DTU_HOST environment variable is required")
         sys.exit(1)
 
-    logger.info("Starting Hoymiles WiFi Exporter")
+    logger.info("Starting Hoymiles WiFi Exporter v%s", get_version())
     logger.info("DTU Host: %s", dtu_host)
     logger.info("Metrics Port: %d", METRICS_PORT)
     logger.info("Scrape Interval: %ds", SCRAPE_INTERVAL)
