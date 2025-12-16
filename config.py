@@ -15,6 +15,7 @@ def setup_logging() -> logging.Logger:
 
 METRICS_PORT = int(os.environ.get("METRICS_PORT", "9099"))
 SCRAPE_INTERVAL = int(os.environ.get("SCRAPE_INTERVAL", "35"))
+STALE_AFTER_FAILURES = int(os.environ.get("STALE_AFTER_FAILURES", "3"))
 
 
 def get_dtu_host() -> str | None:

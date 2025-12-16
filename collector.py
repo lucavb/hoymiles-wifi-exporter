@@ -2,12 +2,24 @@ import logging
 
 from hoymiles_wifi.dtu import DTU
 
-from metrics import dtu_data_age, dtu_up, inverter_info, update_grid_metrics, update_pv_metrics
+from config import STALE_AFTER_FAILURES
+from metrics import (
+    dtu_data_age,
+    dtu_up,
+    inverter_info,
+    reset_instant_metrics,
+    update_grid_metrics,
+    update_pv_metrics,
+)
 
 logger = logging.getLogger(__name__)
 
+_consecutive_failures = 0
+
 
 async def collect_metrics(dtu: DTU, dtu_host: str) -> None:
+    global _consecutive_failures
+
     try:
         response = await dtu.async_get_real_data_new()
 
@@ -16,11 +28,40 @@ async def collect_metrics(dtu: DTU, dtu_host: str) -> None:
             response = await dtu.async_get_real_data()
 
         if response is None:
-            logger.warning("No response from DTU")
+            _consecutive_failures += 1
+            logger.warning(
+                "No response from DTU (failure %d/%d)",
+                _consecutive_failures,
+                STALE_AFTER_FAILURES,
+            )
             dtu_up.set(0)
+            if STALE_AFTER_FAILURES > 0 and _consecutive_failures >= STALE_AFTER_FAILURES:
+                logger.info("Resetting instant metrics after %d failures", _consecutive_failures)
+                try:
+                    reset_instant_metrics()
+                except Exception as reset_error:
+                    logger.error("Failed to reset instant metrics: %s", reset_error)
             return
+    except Exception as e:
+        _consecutive_failures += 1
+        logger.exception(
+            "DTU communication error (failure %d/%d): %s",
+            _consecutive_failures,
+            STALE_AFTER_FAILURES,
+            e,
+        )
+        dtu_up.set(0)
+        if STALE_AFTER_FAILURES > 0 and _consecutive_failures >= STALE_AFTER_FAILURES:
+            try:
+                reset_instant_metrics()
+            except Exception as reset_error:
+                logger.error("Failed to reset instant metrics: %s", reset_error)
+        return
 
-        dtu_up.set(1)
+    _consecutive_failures = 0
+    dtu_up.set(1)
+
+    try:
         logger.debug("Response type: %s", type(response).__name__)
         logger.debug("Response fields: %s", [f for f in dir(response) if not f.startswith("_")])
 
@@ -74,7 +115,5 @@ async def collect_metrics(dtu: DTU, dtu_host: str) -> None:
             ports_processed,
             len(sgs_data_list),
         )
-
     except Exception as e:
-        logger.exception("Error collecting metrics: %s", e)
-        dtu_up.set(0)
+        logger.exception("Error processing metrics data: %s", e)

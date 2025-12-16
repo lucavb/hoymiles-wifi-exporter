@@ -41,6 +41,7 @@ services:
 | `DTU_HOST` | *required* | IP address of the inverter/DTU |
 | `METRICS_PORT` | `9099` | Port for Prometheus metrics endpoint |
 | `SCRAPE_INTERVAL` | `35` | Seconds between data fetches (≥35s recommended) |
+| `STALE_AFTER_FAILURES` | `3` | Reset power metrics to 0 after N consecutive failures (0 = disable) |
 | `DEBUG` | `false` | Enable debug logging |
 
 ## Metrics

@@ -93,8 +93,35 @@ dtu_up = Gauge(
     "DTU connection status (1 = up, 0 = down)",
 )
 
+_known_ports: set[str] = set()
+
+
+def register_port(port_label: str) -> None:
+    """Track a port label for later reset."""
+    _known_ports.add(port_label)
+
+
+def reset_instant_metrics() -> None:
+    """Reset power/voltage/current metrics to 0 for all known ports."""
+    for port in _known_ports:
+        # PV metrics
+        pv_power.labels(port=port).set(0)
+        pv_voltage.labels(port=port).set(0)
+        pv_current.labels(port=port).set(0)
+        # Grid metrics
+        grid_power.labels(port=port).set(0)
+        grid_voltage.labels(port=port).set(0)
+        grid_frequency.labels(port=port).set(0)
+        grid_current.labels(port=port).set(0)
+        grid_reactive_power.labels(port=port).set(0)
+        # Inverter metrics
+        inverter_power_factor.labels(port=port).set(0)
+        inverter_temperature.labels(port=port).set(0)
+        inverter_operating_status.labels(port=port).set(0)
+
 
 def update_pv_metrics(pv_data, port_label: str) -> None:
+    register_port(port_label)
     pv_power.labels(port=port_label).set(pv_data.power / 10)
     pv_voltage.labels(port=port_label).set(pv_data.voltage / 10)
     pv_current.labels(port=port_label).set(pv_data.current / 100)
@@ -114,6 +141,7 @@ def _get_metric_value(obj: object, attr: str, default: float = 0) -> float:
 
 
 def update_grid_metrics(sgs_data, port_label: str) -> None:
+    register_port(port_label)
     grid_voltage.labels(port=port_label).set(_get_metric_value(sgs_data, "voltage") / 10)
     grid_frequency.labels(port=port_label).set(_get_metric_value(sgs_data, "frequency") / 100)
     grid_power.labels(port=port_label).set(_get_metric_value(sgs_data, "power") / 10)
