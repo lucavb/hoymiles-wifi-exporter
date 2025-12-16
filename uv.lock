@@ -112,8 +112,7 @@ wheels = [
 
 [[package]]
 name = "hoymiles-wifi-exporter"
-version = "1.0.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "hoymiles-wifi" },
     { name = "prometheus-client" },

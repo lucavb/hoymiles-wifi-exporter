@@ -1,6 +1,10 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "hoymiles-wifi-exporter"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Prometheus exporter for Hoymiles WiFi inverters"
 readme = "README.md"
 requires-python = ">=3.14.2"
@@ -12,11 +16,20 @@ dependencies = [
 [project.scripts]
 hoymiles-wifi-exporter = "main:main"
 
+[tool.setuptools]
+py-modules = ["main", "config", "metrics", "collector", "version"]
+
 [dependency-groups]
 dev = [
     "pyright>=1.1.407",
     "ruff>=0.14.9",
 ]
+
+[tool.setuptools_scm]
+# Dynamic versioning from git tags
+
+[tool.uv]
+package = true
 
 [tool.ruff]
 line-length = 100

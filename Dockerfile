@@ -1,5 +1,8 @@
 FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim@sha256:74241aba44a777b228aef38d5d1b411a7405f6ec8faffdc284e24656ea3079b5 AS builder
 
+ARG VERSION=unknown
+ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_HOYMILES_WIFI_EXPORTER=${VERSION}
+
 WORKDIR /app
 
 ENV UV_COMPILE_BYTECODE=1
@@ -24,7 +27,6 @@ COPY --from=builder /app/config.py /app/config.py
 COPY --from=builder /app/metrics.py /app/metrics.py
 COPY --from=builder /app/collector.py /app/collector.py
 COPY --from=builder /app/version.py /app/version.py
-COPY --from=builder /app/pyproject.toml /app/pyproject.toml
 
 ENV PATH="/app/.venv/bin:$PATH"
 
