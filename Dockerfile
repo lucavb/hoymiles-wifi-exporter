@@ -20,6 +20,9 @@ WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/main.py /app/main.py
+COPY --from=builder /app/config.py /app/config.py
+COPY --from=builder /app/metrics.py /app/metrics.py
+COPY --from=builder /app/collector.py /app/collector.py
 
 ENV PATH="/app/.venv/bin:$PATH"
 
