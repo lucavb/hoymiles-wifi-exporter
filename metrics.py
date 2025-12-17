@@ -35,53 +35,53 @@ pv_energy_daily = Gauge(
 grid_voltage = Gauge(
     "hoymiles_grid_voltage_volts",
     "Grid voltage in volts",
-    ["port"],
+    ["inverter"],
 )
 grid_frequency = Gauge(
     "hoymiles_grid_frequency_hz",
     "Grid frequency in Hz",
-    ["port"],
+    ["inverter"],
 )
 grid_power = Gauge(
     "hoymiles_grid_power_watts",
     "Grid power in watts",
-    ["port"],
+    ["inverter"],
 )
 grid_reactive_power = Gauge(
     "hoymiles_grid_reactive_power_var",
     "Grid reactive power in var",
-    ["port"],
+    ["inverter"],
 )
 grid_current = Gauge(
     "hoymiles_grid_current_amps",
     "Grid current in amps",
-    ["port"],
+    ["inverter"],
 )
 grid_energy_total = Gauge(
     "hoymiles_grid_energy_total_wh",
     "Total grid energy in watt-hours",
-    ["port"],
+    ["inverter"],
 )
 grid_energy_daily = Gauge(
     "hoymiles_grid_energy_daily_wh",
     "Daily grid energy in watt-hours",
-    ["port"],
+    ["inverter"],
 )
 
 inverter_power_factor = Gauge(
     "hoymiles_inverter_power_factor",
     "Inverter power factor",
-    ["port"],
+    ["inverter"],
 )
 inverter_temperature = Gauge(
     "hoymiles_inverter_temperature_celsius",
     "Inverter temperature in celsius",
-    ["port"],
+    ["inverter"],
 )
 inverter_operating_status = Gauge(
     "hoymiles_inverter_operating_status",
     "Inverter operating status",
-    ["port"],
+    ["inverter"],
 )
 
 dtu_data_age = Gauge(
@@ -94,6 +94,7 @@ dtu_up = Gauge(
 )
 
 _known_ports: set[str] = set()
+_known_inverters: set[str] = set()
 
 
 def register_port(port_label: str) -> None:
@@ -101,23 +102,27 @@ def register_port(port_label: str) -> None:
     _known_ports.add(port_label)
 
 
+def register_inverter(inverter_label: str) -> None:
+    """Track an inverter label for later reset."""
+    _known_inverters.add(inverter_label)
+
+
 def reset_instant_metrics() -> None:
-    """Reset power/voltage/current metrics to 0 for all known ports."""
+    """Reset power/voltage/current metrics to 0 for all known ports and inverters."""
     for port in _known_ports:
-        # PV metrics
         pv_power.labels(port=port).set(0)
         pv_voltage.labels(port=port).set(0)
         pv_current.labels(port=port).set(0)
-        # Grid metrics
-        grid_power.labels(port=port).set(0)
-        grid_voltage.labels(port=port).set(0)
-        grid_frequency.labels(port=port).set(0)
-        grid_current.labels(port=port).set(0)
-        grid_reactive_power.labels(port=port).set(0)
-        # Inverter metrics
-        inverter_power_factor.labels(port=port).set(0)
-        inverter_temperature.labels(port=port).set(0)
-        inverter_operating_status.labels(port=port).set(0)
+
+    for inverter in _known_inverters:
+        grid_power.labels(inverter=inverter).set(0)
+        grid_voltage.labels(inverter=inverter).set(0)
+        grid_frequency.labels(inverter=inverter).set(0)
+        grid_current.labels(inverter=inverter).set(0)
+        grid_reactive_power.labels(inverter=inverter).set(0)
+        inverter_power_factor.labels(inverter=inverter).set(0)
+        inverter_temperature.labels(inverter=inverter).set(0)
+        inverter_operating_status.labels(inverter=inverter).set(0)
 
 
 def update_pv_metrics(pv_data, port_label: str) -> None:
@@ -140,23 +145,29 @@ def _get_metric_value(obj: object, attr: str, default: float = 0) -> float:
         return default
 
 
-def update_grid_metrics(sgs_data, port_label: str) -> None:
-    register_port(port_label)
-    grid_voltage.labels(port=port_label).set(_get_metric_value(sgs_data, "voltage") / 10)
-    grid_frequency.labels(port=port_label).set(_get_metric_value(sgs_data, "frequency") / 100)
-    grid_power.labels(port=port_label).set(_get_metric_value(sgs_data, "active_power") / 10)
+def update_grid_metrics(sgs_data, inverter_label: str) -> None:
+    register_inverter(inverter_label)
+    grid_voltage.labels(inverter=inverter_label).set(_get_metric_value(sgs_data, "voltage") / 10)
+    grid_frequency.labels(inverter=inverter_label).set(
+        _get_metric_value(sgs_data, "frequency") / 100
+    )
+    grid_power.labels(inverter=inverter_label).set(_get_metric_value(sgs_data, "active_power") / 10)
     reactive = _get_metric_value(sgs_data, "reactive_power")
-    grid_reactive_power.labels(port=port_label).set(reactive / 10)
-    grid_current.labels(port=port_label).set(_get_metric_value(sgs_data, "current") / 100)
-    grid_energy_total.labels(port=port_label).set(_get_metric_value(sgs_data, "energy_total"))
-    grid_energy_daily.labels(port=port_label).set(_get_metric_value(sgs_data, "energy_daily"))
+    grid_reactive_power.labels(inverter=inverter_label).set(reactive / 10)
+    grid_current.labels(inverter=inverter_label).set(_get_metric_value(sgs_data, "current") / 100)
+    grid_energy_total.labels(inverter=inverter_label).set(
+        _get_metric_value(sgs_data, "energy_total")
+    )
+    grid_energy_daily.labels(inverter=inverter_label).set(
+        _get_metric_value(sgs_data, "energy_daily")
+    )
 
-    inverter_power_factor.labels(port=port_label).set(
+    inverter_power_factor.labels(inverter=inverter_label).set(
         _get_metric_value(sgs_data, "power_factor") / 1000
     )
-    inverter_temperature.labels(port=port_label).set(
+    inverter_temperature.labels(inverter=inverter_label).set(
         _get_metric_value(sgs_data, "temperature") / 10
     )
-    inverter_operating_status.labels(port=port_label).set(
+    inverter_operating_status.labels(inverter=inverter_label).set(
         _get_metric_value(sgs_data, "operating_status")
     )

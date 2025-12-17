@@ -35,7 +35,7 @@ async def collect_metrics(dtu: DTU, dtu_host: str) -> None:
                 STALE_AFTER_FAILURES,
             )
             dtu_up.set(0)
-            if STALE_AFTER_FAILURES > 0 and _consecutive_failures >= STALE_AFTER_FAILURES:
+            if STALE_AFTER_FAILURES > 0 and _consecutive_failures == STALE_AFTER_FAILURES:
                 logger.info("Resetting instant metrics after %d failures", _consecutive_failures)
                 try:
                     reset_instant_metrics()
@@ -51,7 +51,8 @@ async def collect_metrics(dtu: DTU, dtu_host: str) -> None:
             e,
         )
         dtu_up.set(0)
-        if STALE_AFTER_FAILURES > 0 and _consecutive_failures >= STALE_AFTER_FAILURES:
+        if STALE_AFTER_FAILURES > 0 and _consecutive_failures == STALE_AFTER_FAILURES:
+            logger.info("Resetting instant metrics after %d failures", _consecutive_failures)
             try:
                 reset_instant_metrics()
             except Exception as reset_error:
@@ -89,6 +90,9 @@ async def collect_metrics(dtu: DTU, dtu_host: str) -> None:
             )
             sgs_data_map[serial_number] = sgs_data
 
+        for serial_number, sgs_data in sgs_data_map.items():
+            update_grid_metrics(sgs_data, serial_number)
+
         ports_processed = 0
         for pv_data in pv_data_list:
             serial_number = str(pv_data.serial_number)
@@ -101,13 +105,6 @@ async def collect_metrics(dtu: DTU, dtu_host: str) -> None:
                 [f for f in dir(pv_data) if not f.startswith("_")],
             )
             update_pv_metrics(pv_data, port_label)
-
-            sgs_data = sgs_data_map.get(serial_number)
-            if sgs_data:
-                update_grid_metrics(sgs_data, port_label)
-            else:
-                logger.warning("Port %s: no sgs_data found, grid metrics not updated", port_label)
-
             ports_processed += 1
 
         logger.info(
