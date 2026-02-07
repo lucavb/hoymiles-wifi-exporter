@@ -21,7 +21,7 @@ py-modules = ["main", "config", "metrics", "collector", "version"]
 
 [dependency-groups]
 dev = [
-    "pyright>=1.1.407",
+    "pyright>=1.1.408",
     "ruff>=0.14.10",
 ]
 
