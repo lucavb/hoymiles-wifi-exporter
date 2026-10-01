@@ -160,7 +160,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "hoymiles-wifi", specifier = ">=0.5.6" },
-    { name = "prometheus-client", specifier = ">=0.25.0" },
+    { name = "prometheus-client", specifier = ">=0.26.0" },
 ]
 
 [package.metadata.requires-dev]
