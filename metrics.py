@@ -140,7 +140,7 @@ def _get_metric_value(obj: object, attr: str, default: float = 0) -> float:
         return default
     try:
         return float(value)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         logger.debug("Could not convert %s=%r to float", attr, value)
         return default
 
