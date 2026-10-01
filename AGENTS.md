@@ -9,7 +9,15 @@ If you are an AI coding agent working in this repo, optimize for:
 
 ## Project layout
 
-- `main.py`: single-file application entrypoint (defines metrics, polling loop, and HTTP server)
+- `main.py`: application entrypoint — HTTP server, signal handling, scrape loop
+- `collector.py`: scrape orchestration — one DTU poll per cycle, plus the staleness policy
+- `snapshot.py`: pure interpretation — one protobuf response → a frozen `DtuSnapshot` of readings (all scaling lives here)
+- `metrics.py`: Prometheus renderer — publishes a snapshot to gauges, resets instant metrics on staleness
+- `config.py`: environment variables and logging setup
+- `version.py`: dynamic version resolution
+- `CONTEXT.md`: domain glossary (DTU, inverter, port, grid/PV reading, snapshot, staleness threshold) — read before naming anything
+- `docs/adr/`: accepted architectural decisions — do not re-litigate them
+- `tests/`: pytest suite (snapshot mapping + renderer)
 - `pyproject.toml`: project metadata + dependencies + ruff/pyright configuration
 - `uv.lock`: locked dependency graph used by `uv sync --frozen`
 - `Dockerfile`: multi-stage build using `uv` to create a `.venv`, then a slim runtime image
@@ -22,6 +30,7 @@ If you are an AI coding agent working in this repo, optimize for:
 - **Optional env vars**:
   - `METRICS_PORT` (default: `9099`)
   - `SCRAPE_INTERVAL` seconds (default: `35`; do not go below ~32s as it can impact cloud/app connectivity per upstream notes)
+  - `STALE_AFTER_FAILURES` (default: `3`): consecutive failed scrapes after which instant metrics are reset once
   - `DEBUG` (`true`/`1` enables debug logs)
 
 Metrics are exposed via `prometheus_client.start_http_server(METRICS_PORT)`.
@@ -32,6 +41,7 @@ Metrics are exposed via `prometheus_client.start_http_server(METRICS_PORT)`.
 - If you must change a metric, prefer:
   - adding a *new* metric instead of renaming
   - keeping old metrics for backward compatibility when feasible
+- Known history: `hoymiles_grid_energy_total_wh` / `hoymiles_grid_energy_daily_wh` were removed (no source field exists in the DTU response) and `hoymiles_inverter_operating_status` now carries the inverter's link status.
 
 ## Development environment
 
@@ -89,6 +99,12 @@ uv run ruff format --check .
 uv run pyright
 ```
 
+### Test
+
+```bash
+uv run pytest
+```
+
 ### Docker
 
 Build:
@@ -110,6 +126,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs:
 - `ruff check .`
 - `ruff format --check .`
 - `pyright`
+- `pytest`
 - `docker build ...`
 
 If you change dependencies or Python constraints, update:
@@ -129,7 +146,7 @@ As an agent, do not introduce manual version-bump commits unless the maintainer 
 ## Coding conventions
 
 - Keep changes small and reviewable (this repo is intentionally minimal)
-- Prefer clear, explicit code in `main.py` over adding new modules unless complexity demands it
+- Keep the module roles: interpretation belongs in `snapshot.py`, rendering in `metrics.py`, orchestration in `collector.py`. Deepen the existing module before adding a new shallow one.
 - Follow existing logging style and keep default logging at INFO (DEBUG behind `DEBUG` env var)
 - Ruff configuration:
   - line length: 100

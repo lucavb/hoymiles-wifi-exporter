@@ -1,6 +1,15 @@
+"""Prometheus renderer for DTU snapshots.
+
+Owns the module-level metric objects; interpretation of the wire format
+lives in snapshot.py, this module only publishes.
+"""
+
 import logging
+import time
 
 from prometheus_client import Gauge, Info
+
+from snapshot import DtuSnapshot
 
 logger = logging.getLogger(__name__)
 
@@ -57,16 +66,6 @@ grid_current = Gauge(
     "Grid current in amps",
     ["inverter"],
 )
-grid_energy_total = Gauge(
-    "hoymiles_grid_energy_total_wh",
-    "Total grid energy in watt-hours",
-    ["inverter"],
-)
-grid_energy_daily = Gauge(
-    "hoymiles_grid_energy_daily_wh",
-    "Daily grid energy in watt-hours",
-    ["inverter"],
-)
 
 inverter_power_factor = Gauge(
     "hoymiles_inverter_power_factor",
@@ -97,17 +96,43 @@ _known_ports: set[str] = set()
 _known_inverters: set[str] = set()
 
 
-def register_port(port_label: str) -> None:
-    """Track a port label for later reset."""
-    _known_ports.add(port_label)
+def publish(snapshot: DtuSnapshot, dtu_host: str) -> None:
+    inverter_info.info(
+        {
+            "dtu_serial": snapshot.dtu.serial,
+            "dtu_sw_version": str(snapshot.dtu.firmware_version),
+            "host": dtu_host,
+        }
+    )
+
+    logger.debug("Raw DTU timestamp: %s", snapshot.dtu.timestamp)
+
+    if snapshot.dtu.timestamp > 0:
+        dtu_data_age.set(time.time() - snapshot.dtu.timestamp)
+
+    for r in snapshot.inverters:
+        _known_inverters.add(r.inverter)
+        labels = {"inverter": r.inverter}
+        grid_voltage.labels(**labels).set(r.voltage_volts)
+        grid_frequency.labels(**labels).set(r.frequency_hz)
+        grid_power.labels(**labels).set(r.power_watts)
+        grid_reactive_power.labels(**labels).set(r.reactive_power_var)
+        grid_current.labels(**labels).set(r.current_amps)
+        inverter_power_factor.labels(**labels).set(r.power_factor)
+        inverter_temperature.labels(**labels).set(r.temperature_celsius)
+        inverter_operating_status.labels(**labels).set(r.link_status)
+
+    for r in snapshot.ports:
+        _known_ports.add(r.port)
+        labels = {"port": r.port}
+        pv_power.labels(**labels).set(r.power_watts)
+        pv_voltage.labels(**labels).set(r.voltage_volts)
+        pv_current.labels(**labels).set(r.current_amps)
+        pv_energy_total.labels(**labels).set(r.energy_total_wh)
+        pv_energy_daily.labels(**labels).set(r.energy_daily_wh)
 
 
-def register_inverter(inverter_label: str) -> None:
-    """Track an inverter label for later reset."""
-    _known_inverters.add(inverter_label)
-
-
-def reset_instant_metrics() -> None:
+def reset_instant() -> None:
     """Reset power/voltage/current metrics to 0 for all known ports and inverters."""
     for port in _known_ports:
         pv_power.labels(port=port).set(0)
@@ -123,51 +148,3 @@ def reset_instant_metrics() -> None:
         inverter_power_factor.labels(inverter=inverter).set(0)
         inverter_temperature.labels(inverter=inverter).set(0)
         inverter_operating_status.labels(inverter=inverter).set(0)
-
-
-def update_pv_metrics(pv_data, port_label: str) -> None:
-    register_port(port_label)
-    pv_power.labels(port=port_label).set(pv_data.power / 10)
-    pv_voltage.labels(port=port_label).set(pv_data.voltage / 10)
-    pv_current.labels(port=port_label).set(pv_data.current / 100)
-    pv_energy_total.labels(port=port_label).set(pv_data.energy_total)
-    pv_energy_daily.labels(port=port_label).set(pv_data.energy_daily)
-
-
-def _get_metric_value(obj: object, attr: str, default: float = 0) -> float:
-    value = getattr(obj, attr, None)
-    if value is None:
-        return default
-    try:
-        return float(value)
-    except ValueError, TypeError:
-        logger.debug("Could not convert %s=%r to float", attr, value)
-        return default
-
-
-def update_grid_metrics(sgs_data, inverter_label: str) -> None:
-    register_inverter(inverter_label)
-    grid_voltage.labels(inverter=inverter_label).set(_get_metric_value(sgs_data, "voltage") / 10)
-    grid_frequency.labels(inverter=inverter_label).set(
-        _get_metric_value(sgs_data, "frequency") / 100
-    )
-    grid_power.labels(inverter=inverter_label).set(_get_metric_value(sgs_data, "active_power") / 10)
-    reactive = _get_metric_value(sgs_data, "reactive_power")
-    grid_reactive_power.labels(inverter=inverter_label).set(reactive / 10)
-    grid_current.labels(inverter=inverter_label).set(_get_metric_value(sgs_data, "current") / 100)
-    grid_energy_total.labels(inverter=inverter_label).set(
-        _get_metric_value(sgs_data, "energy_total")
-    )
-    grid_energy_daily.labels(inverter=inverter_label).set(
-        _get_metric_value(sgs_data, "energy_daily")
-    )
-
-    inverter_power_factor.labels(inverter=inverter_label).set(
-        _get_metric_value(sgs_data, "power_factor") / 1000
-    )
-    inverter_temperature.labels(inverter=inverter_label).set(
-        _get_metric_value(sgs_data, "temperature") / 10
-    )
-    inverter_operating_status.labels(inverter=inverter_label).set(
-        _get_metric_value(sgs_data, "operating_status")
-    )

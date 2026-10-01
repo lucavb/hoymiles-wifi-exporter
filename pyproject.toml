@@ -17,11 +17,12 @@ dependencies = [
 hoymiles-wifi-exporter = "main:main"
 
 [tool.setuptools]
-py-modules = ["main", "config", "metrics", "collector", "version"]
+py-modules = ["main", "config", "metrics", "collector", "snapshot", "version"]
 
 [dependency-groups]
 dev = [
     "pyright>=1.1.414",
+    "pytest>=8.4",
     "ruff>=0.16.9",
 ]
 
