@@ -17,6 +17,12 @@
       "rangeStrategy": "bump"
     },
     {
+      // The minimum supported Python version is a compatibility decision, not a dependency update.
+      "matchManagers": ["pep621"],
+      "matchDepTypes": ["requires-python"],
+      "enabled": false
+    },
+    {
       "matchDepTypes": ["devDependencies"],
       "automerge": true
     },
