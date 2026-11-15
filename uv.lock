@@ -104,7 +104,7 @@ wheels = [
 
 [[package]]
 name = "hoymiles-wifi"
-version = "0.7.3"
+version = "0.7.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "crcmod" },
@@ -112,7 +112,7 @@ dependencies = [
     { name = "protobuf" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/75/01eea821674f779887ee07a18f0643a93f42fd1a6acf618612bf6a00f112/hoymiles_wifi-0.7.3-py3-none-any.whl", hash = "sha256:08e4b8170efb95246d687bdac1f76b67b196086c03a7b775681758b5a641a83a", size = 66548, upload-time = "2026-11-14T14:05:43.427Z" },
+    { url = "https://files.pythonhosted.org/packages/42/fd/7cb1b90ade9ac089f9e671bb4118dbfd9f6b265941e699f776331a9b2746/hoymiles_wifi-0.7.4-py3-none-any.whl", hash = "sha256:1fea45a97588d71d5b24868ad66bdaf84c709c925533ce11b5f5039694e7b845", size = 66562, upload-time = "2026-11-15T14:44:19.957Z" },
 ]
 
 [[package]]
@@ -132,7 +132,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "hoymiles-wifi", specifier = ">=0.7.3" },
+    { name = "hoymiles-wifi", specifier = ">=0.7.4" },
     { name = "prometheus-client", specifier = ">=0.26.0" },
 ]
 
